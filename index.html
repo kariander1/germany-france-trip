@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="הטיול שלנו">
+<title>גרמניה ואלזס</title>
+<meta name="description" content="תוכנית הטיול לגרמניה ולאלזס — שווקי כריסמס, טירות ומרחצאות.">
+<meta name="theme-color" content="#0b1320">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎄</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&family=Rubik:wght@400;500;700;800&family=Suez+One&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header id="nowbar" class="nowbar" aria-live="polite">
+  <div class="nb-inner">
+    <div class="nb-top">
+      <div class="nb-status" id="nbStatus">טוען…</div>
+      <div class="nb-btns"><button class="nb-jump nb-lang" id="langBtn" type="button" aria-label="Language / שפה">EN</button><a class="nb-jump nb-story" href="story.html" title="הסיפור">🌍<span> הסיפור</span></a><button class="nb-jump" id="nbJump" type="button">📍 קפיצה לעכשיו</button></div>
+    </div>
+    <nav class="nb-days" id="nbDays" aria-label="ימי הטיול"></nav>
+    <div class="nb-day" id="nbDay" hidden>
+      <div class="nb-track" id="nbTrack"><div class="nb-fill" id="nbFill"></div><div class="nb-marker" id="nbMarker"></div></div>
+      <div class="nb-now" id="nbNow"></div>
+    </div>
+  </div>
+</header>
+
+<section class="hero" id="hero">
+  <div class="hero-img" id="heroImg"></div>
+  <div class="snow" aria-hidden="true"></div>
+  <div class="hero-text">
+    <p class="hero-dates">ירח דבש 🤍 · 11 ימים</p>
+    <h1 id="heroTitle"></h1>
+    <p class="hero-sub" id="heroSub"></p>
+    <div class="countdown" id="countdown"></div>
+    <div class="hero-cta"><a class="cta primary" href="story.html">▶ צפו בסיפור</a><a class="cta" href="#mapsec">🗺️ המסלול על המפה</a><a class="cta" href="#day-1">📅 התוכנית יום־יום</a></div>
+    <ol class="route" id="route"></ol>
+  </div>
+</section>
+
+<section class="mapsec" id="mapsec">
+  <div class="mapsec-head"><h2>המסלול מהחלל</h2><p>11 ימים, מבוואריה דרך הדרך הרומנטית ועד אלזס ופרנקפורט. לחצו על נקודה כדי לקפוץ ליום.</p></div>
+  <div id="routemap" role="img" aria-label="מפת לוויין של מסלול הטיול"></div>
+</section>
+<main id="days"></main>
+
+<footer class="foot">
+  <p>השעות בפס ״איפה אנחנו״ הן הערכה לפי סדר המסלול, בשעון מקומי (מרכז אירופה). שעות עם 🔒 הן אירועים או הזמנות עם שעה קבועה.</p>
+  <p>ללא גלוטן: תמיד לשאול על הפרדה בהכנה וזיהום משני. שעות פתיחה — לוודא סמוך לביקור.</p>
+  <p class="credit">תמונות: Wikimedia Commons / Wikipedia, ברישיונות CC · צילומי לוויין: Esri, Maxar, Earthstar Geographics.</p>
+</footer>
+
+<script src="images.js"></script>
+<script src="data.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="geo.js"></script>
+<script src="i18n-en.js"></script>
+<script src="i18n.js"></script>
+<script src="when.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

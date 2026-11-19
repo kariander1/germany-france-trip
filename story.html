@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#05070b">
+<title>הסיפור · גרמניה ואלזס</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌍</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&family=Rubik:wght@400;500;700;800&family=Suez+One&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  :root{--o:#f0c36a;--o2:#ffdf9e;--t:#f4f1ea;--d:#c3c9d2;--ctl-h:64px}
+  html,body{margin:0;height:100%;background:#05070b;color:var(--t);font-family:Rubik,system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden;overscroll-behavior:none}
+  #map{position:fixed;inset:0;background:#0c1f2e;z-index:0}
+  .leaflet-tile-pane{transition:filter 1.4s ease}
+  body.dim .leaflet-tile-pane{filter:brightness(.55) saturate(.85)}
+  .leaflet-control-attribution{background:rgba(0,0,0,.45)!important;color:#99a!important;font-size:10px}
+  .leaflet-control-attribution a{color:#bbc!important}
+  #veil{position:fixed;inset:0;pointer-events:none;z-index:2;background:linear-gradient(270deg,rgba(5,7,11,.82) 0%,rgba(5,7,11,.35) 38%,rgba(5,7,11,0) 62%),linear-gradient(0deg,rgba(5,7,11,.55),rgba(5,7,11,0) 22%)}
+  #txt{position:fixed;inset-inline-start:6vw;top:50%;transform:translateY(-55%);max-width:36vw;z-index:3;pointer-events:none}
+  #k{font:700 clamp(24px,2.2vw,32px)/1 "Amatic SC",cursive;letter-spacing:.04em;color:var(--o);margin-bottom:12px;min-height:1em}
+  #h h1{font-family:"Suez One",Georgia,serif;font-size:clamp(30px,3.6vw,56px);line-height:1.15;margin:0;font-weight:400;text-shadow:0 2px 24px rgba(0,0,0,.5)}
+  #h h1 b{color:var(--o2)}
+  #s{font-size:clamp(15px,1.25vw,19px);color:var(--d);margin:14px 0 0;line-height:1.6}
+  ul.bul{margin:16px 0 0;padding:0;list-style:none;font-size:clamp(15px,1.3vw,20px);font-weight:500;line-height:1.55}
+  ul.bul li{padding-inline-start:20px;position:relative}
+  ul.bul li::before{content:"";position:absolute;inset-inline-start:2px;top:.62em;width:8px;height:8px;border-radius:50%;background:var(--o);box-shadow:0 0 0 4px rgba(240,195,106,.2)}
+  .wx{display:inline-block;margin-top:16px;font-size:14px;color:var(--d);background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.12);padding:5px 12px;border-radius:999px}
+  .ch{opacity:0;animation:chIn .4s ease forwards}@keyframes chIn{to{opacity:1}}
+  .fade{opacity:0;transition:opacity .35s ease}.fade.in{opacity:1}
+  .big{display:flex;gap:34px;flex-wrap:wrap;margin-top:18px}
+  .big div b{display:block;font:800 clamp(44px,5vw,78px)/1 Rubik,sans-serif;color:var(--o)}
+  .big div span{font-size:15px;color:var(--d)}
+  /* photo cards */
+  #pics{position:fixed;inset-inline-end:4vw;bottom:calc(var(--ctl-h) + 34px);z-index:3;display:flex;gap:14px;align-items:flex-end;pointer-events:none}
+  .pc{width:190px;background:rgba(10,12,16,.82);border:1px solid rgba(255,255,255,.22);border-radius:12px;padding:5px;box-shadow:0 10px 40px rgba(0,0,0,.55);opacity:0;transform:translateY(18px) scale(.94);transition:opacity .7s ease,transform .7s cubic-bezier(.2,.8,.2,1)}
+  .pc.in{opacity:1;transform:none}
+  .pc:nth-child(2){width:150px}.pc:nth-child(3){width:150px}
+  .pc img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px;display:block}
+  .pc span{display:block;color:#e4e4e8;font:600 12px Rubik,sans-serif;text-align:center;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* markers */
+  .pin{position:relative}
+  .pin i{position:absolute;left:-7px;top:-7px;width:14px;height:14px;border-radius:50%;background:var(--o);border:2px solid #fff;box-shadow:0 0 0 0 rgba(240,195,106,.7)}
+  .pin.on i{animation:pulse 1.6s infinite;background:#ff5a4e}
+  @keyframes pulse{to{box-shadow:0 0 0 26px rgba(255,90,78,0)}}
+  .pin b{position:absolute;top:-10px;right:14px;white-space:nowrap;color:#fff;font:700 14px Rubik,sans-serif;background:rgba(5,7,11,.62);padding:3px 8px;border-radius:6px;text-shadow:0 1px 3px #000}
+  .leaflet-marker-icon{transition:opacity .6s ease}
+  path.route{stroke:#ffd27a;stroke-width:3.5;fill:none;filter:drop-shadow(0 0 6px rgba(255,200,100,.8));stroke-linecap:round;stroke-linejoin:round}
+  path.route.ghost{stroke:rgba(255,255,255,.35);stroke-width:2;stroke-dasharray:4 7;filter:none}
+  /* controls */
+  #ctl{position:fixed;inset-inline-start:6vw;bottom:calc(18px + env(safe-area-inset-bottom));z-index:4;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  #ctl button,.btn{background:rgba(255,255,255,.1);color:var(--t);border:1px solid rgba(255,255,255,.2);border-radius:999px;min-width:44px;height:40px;padding:0 14px;font:600 15px Rubik,sans-serif;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
+  #ctl button:hover,.btn:hover{background:rgba(255,255,255,.18)}
+  #sd{display:flex;gap:6px;align-items:center;margin:0 4px}
+  #sd i{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.28);cursor:pointer;padding:0;border:6px solid transparent;background-clip:content-box}
+  #sd i.on{background-color:var(--o)}#sd i.done{background-color:rgba(240,195,106,.5)}
+  .opt{display:flex;align-items:center;gap:6px;font:600 13px Rubik,sans-serif;color:#cfd6df;background:rgba(0,0,0,.45);padding:0 12px;height:40px;border-radius:999px;cursor:pointer;user-select:none}
+  .opt input{accent-color:var(--o);margin:0;width:16px;height:16px}
+  #bar{position:fixed;inset-inline-start:0;bottom:0;height:3px;background:linear-gradient(270deg,var(--o),#ff8a5b);width:0;z-index:5;transition:width .6s ease}
+  #top{position:fixed;top:calc(14px + env(safe-area-inset-top));left:4vw;right:4vw;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:10px;pointer-events:none}
+  #top>*{pointer-events:auto}
+  .brand{font:700 15px "Suez One",serif;color:#fff;text-shadow:0 1px 6px #000;opacity:.9}
+  .skip{background:var(--o);color:#1b1406;border:0;font-weight:700}
+  .skip:hover{background:var(--o2)}
+  #end{position:fixed;inset:0;z-index:4;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;background:radial-gradient(circle,rgba(5,7,11,.45),rgba(5,7,11,.92));opacity:0;pointer-events:none;transition:opacity 1s}
+  #end.in{opacity:1;pointer-events:auto}
+  #end h2{font:400 clamp(40px,7vw,92px)/1.05 "Suez One",serif;margin:0}
+  #end p{color:var(--d);font-size:18px;margin:12px 0 26px}
+  #end .row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+  #wm{position:fixed;left:8px;bottom:6px;z-index:3;font-size:10px;color:#889;pointer-events:none}
+  @media (max-width:760px),(orientation:portrait) and (max-width:1100px){
+    #veil{background:linear-gradient(180deg,rgba(5,7,11,.9) 0%,rgba(5,7,11,.55) 34%,rgba(5,7,11,0) 55%),linear-gradient(0deg,rgba(5,7,11,.8),rgba(5,7,11,0) 32%)}
+    #txt{right:18px;left:18px;max-width:none;top:calc(64px + env(safe-area-inset-top));transform:none}
+    #h h1{font-size:clamp(26px,7.4vw,38px)}
+    ul.bul{font-size:15px;margin-top:10px}
+    #s{font-size:14px}
+    #pics{left:12px;right:12px;bottom:calc(var(--ctl-h) + 22px + env(safe-area-inset-bottom));justify-content:center;gap:8px}
+    .pc,.pc:nth-child(2),.pc:nth-child(3){width:31%;max-width:210px;padding:3px}
+    .pc span{font-size:10px}
+    #ctl{right:12px;left:12px;justify-content:center;gap:6px}
+    #ctl .opt{display:none}
+    #sd i{width:8px;height:8px;border-width:5px}
+    .pin b{font-size:12px}
+  }
+  @media (max-width:760px) and (max-height:700px){#pics{display:none}}
+  @media (prefers-reduced-motion:reduce){.ch{animation:none;opacity:1}.pin.on i{animation:none}}
+  [dir="ltr"] #veil{background:linear-gradient(90deg,rgba(5,7,11,.82) 0%,rgba(5,7,11,.35) 38%,rgba(5,7,11,0) 62%),linear-gradient(0deg,rgba(5,7,11,.55),rgba(5,7,11,0) 22%)}
+  [dir="ltr"] .pin b{right:auto;left:14px}
+  #langBtn{min-width:44px}
+</style>
+</head>
+<body class="dim">
+<div id="map"></div>
+<div id="veil"></div>
+<div id="top"><span class="brand" id="brand"></span><span style="display:flex;gap:8px"><button class="btn" id="langBtn" type="button">EN</button><a class="btn skip" id="full" href="index.html"></a></span></div>
+<div id="txt"><div id="k" class="fade"></div><div id="h" class="fade"></div><div id="s" class="fade"></div></div>
+<div id="pics"></div>
+<div id="ctl">
+  <button id="pv" title="הקודם" aria-label="הקודם">›</button>
+  <button id="pp" title="השהיה / ניגון" aria-label="השהיה">❚❚</button>
+  <button id="nx" title="הבא" aria-label="הבא">‹</button>
+  <span id="sd"></span>
+  <label class="opt" title="מעבר אוטומטי בין הסצנות"><input type="checkbox" id="au" checked> אוטומטי</label>
+</div>
+<div id="bar"></div>
+<div id="end"><h2>נתראה באירופה 🤍</h2><p id="endp"></p><div class="row"><a class="btn skip" href="index.html">לתוכנית המלאה</a><button class="btn" id="again">↻ שוב מההתחלה</button></div></div>
+<div id="wm">צילומי לוויין: Esri, Maxar, Earthstar Geographics · תמונות: Wikimedia Commons</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="images.js"></script>
+<script src="data.js"></script>
+<script src="geo.js"></script>
+<script src="i18n-en.js"></script>
+<script src="i18n.js"></script>
+<script src="when.js"></script>
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const T = TRIP, P = PLACES, IMG = window.IMG || {}, S = STR, EN = LANG === 'en';
+$('brand').textContent = S.sBrand; $('full').textContent = S.sFull; $('langBtn').textContent = EN ? 'עב' : 'EN'; $('langBtn').onclick = () => setLang(EN ? 'he' : 'en');
+$('au').parentNode.lastChild.textContent = ' ' + S.sAuto; $('again').textContent = S.sAgain; document.querySelector('#end .skip').textContent = S.sFullBtn; $('end').querySelector('h2').textContent = S.sEndH; $('wm').textContent = S.sCredit;
+$('pv').title = S.sPrev; $('nx').title = S.sNext; if (EN) { $('pv').textContent = '‹'; $('nx').textContent = '›'; }
+const mobile = () => innerWidth <= 760 || (innerHeight > innerWidth && innerWidth <= 1100);
+const map = L.map('map', { zoomControl: false, zoomSnap: 0.1, scrollWheelZoom: false, dragging: false, doubleClickZoom: false, keyboard: false, boxZoom: false, touchZoom: false, tap: false })
+  .setView([48.9, 9.3], 5);
+L.tileLayer(SAT_TILES, { maxZoom: 18, attribution: 'Esri, Maxar, Earthstar Geographics' }).addTo(map);
+const labels = L.tileLayer(LABEL_TILES, { maxZoom: 18, opacity: .75 }).addTo(map);
+map.attributionControl.setPrefix('');
+['flyTo', 'flyToBounds', 'fitBounds', 'setView'].forEach(fn => { const o = map[fn].bind(map); map[fn] = (...a) => { try { return o(...a); } catch (e) { return map; } }; });
+
+const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+const clean = s => s.replace(/[\u{1F300}-\u{1FAFF}☀-➿️‍]/gu, '').replace(/\s+—\s+[^—]*$/, m => m).trim();
+
+// route: faint full route + bright per-day segments
+const dayLL = GEO.map(g => g.path.map(k => P[k].ll));
+const all = dayLL.flat();
+const ghost = L.polyline(all, { className: 'route ghost', interactive: false }).addTo(map);
+const segs = dayLL.map(ll => L.polyline(ll.length > 1 ? ll : [ll[0], ll[0]], { className: 'route', interactive: false, opacity: 0 }).addTo(map));
+const pinFor = {};
+const pin = (k) => pinFor[k] || (pinFor[k] = L.marker(P[k].ll, { icon: L.divIcon({ className: '', html: `<div class="pin"><i></i><b>${P[k].n}</b></div>`, iconSize: [0, 0] }), opacity: 0, interactive: false }).addTo(map));
+Object.keys(P).forEach(pin);
+
+let fast = false, sg = 0;
+const later = (fn, ms) => { if (fast) return fn(); const g = sg; setTimeout(() => g === sg && fn(), ms); };
+function drawSeg(i, on) {
+  const pl = segs[i], el = pl.getElement && pl.getElement(); if (!el) return;
+  if (!on) { pl.setStyle({ opacity: 0 }); return; }
+  pl.setStyle({ opacity: 1 });
+  const len = el.getTotalLength ? el.getTotalLength() : 1000;
+  el.style.transition = 'none'; el.style.strokeDasharray = len; el.style.strokeDashoffset = fast ? 0 : len;
+  el.getBoundingClientRect();
+  if (!fast) { el.style.transition = 'stroke-dashoffset 2.6s ease-in-out'; el.style.strokeDashoffset = 0; }
+}
+map.on('zoomend', () => segs.forEach(pl => { const el = pl.getElement(); if (el && pl.options.opacity) { el.style.transition = 'none'; el.style.strokeDasharray = 'none'; el.style.strokeDashoffset = 0; } }));
+const showPins = (keys, active) => Object.keys(P).forEach(k => { const m = pin(k); m.setOpacity(keys.includes(k) ? 1 : 0); const e = m.getElement(); e && e.firstChild.classList.toggle('on', k === active); });
+
+// camera: put the target in the open part of the screen (left on desktop, middle on phones)
+const off = () => mobile() ? L.point(0, -innerHeight * 0.06) : L.point((EN ? 1 : -1) * innerWidth * 0.17, 0);
+function flyPoint(ll, z, d = 3.2) { const c = map.unproject(map.project(ll, z).add(off()), z); fast ? map.setView(c, z, { animate: false }) : map.flyTo(c, z, { duration: d }); }
+function flyBounds(lls, d = 2.6) {
+  const b = L.latLngBounds(lls), o = mobile() ? { paddingTopLeft: [30, innerHeight * .42], paddingBottomRight: [30, innerHeight * .3] } : (EN ? { paddingTopLeft: [innerWidth * .42, 80], paddingBottomRight: [60, 120] } : { paddingTopLeft: [60, 80], paddingBottomRight: [innerWidth * .42, 120] });
+  fast ? map.fitBounds(b, Object.assign({ animate: false }, o)) : map.flyToBounds(b, Object.assign({ duration: d, maxZoom: 9.5 }, o));
+}
+
+// text with a per-letter fade, like the Unseen Earth story
+let sayGen = 0;
+function typeset(el, html, start) {
+  el.innerHTML = html || ''; let n = start;
+  const walk = node => [...node.childNodes].forEach(c => {
+    if (c.nodeType === 3) { const f = document.createDocumentFragment();
+      for (const w of c.textContent.split(/(\s+)/)) { const sp = document.createElement('span'); sp.className = 'ch'; sp.textContent = w; sp.style.animationDelay = (n++ * 45) + 'ms'; f.appendChild(sp); }
+      c.replaceWith(f); } else walk(c); });
+  walk(el); return n;
+}
+function say(k, h, s) {
+  const g = ++sayGen; [$('k'), $('h'), $('s')].forEach(e => e.classList.remove('in'));
+  setTimeout(() => { if (g !== sayGen) return; $('k').textContent = k || ''; const n = typeset($('h'), h, 0); typeset($('s'), s, n + 4); [$('k'), $('h'), $('s')].forEach(e => e.classList.add('in')); }, fast ? 0 : 320);
+}
+function pics(list) {
+  const box = $('pics'); box.innerHTML = list.map(p => `<div class="pc"><img src="${p.src}" alt=""><span>${esc(p.n)}</span></div>`).join('');
+  [...box.children].forEach((c, k) => later(() => c.classList.add('in'), 900 + k * 280));
+}
+
+// scenes
+const highlights = d => {
+  const pick = d.stops.filter(s => [`must`, `event`].includes(s.tag)).concat(d.stops.filter(s => s.tag === `market`));
+  return [...new Set(pick.map(s => clean(s.n).replace(/\s+—\s+.*/, '')))].slice(0, 4);
+};
+const dayPics = d => {
+  const out = [], seen = new Set();
+  const add = (k, n) => { if (k && IMG[k] && !seen.has(IMG[k])) { seen.add(IMG[k]); out.push({ src: IMG[k], n }); } };
+  add(d.img, d.place);
+  d.stops.forEach(s => add(s.img, clean(s.n).replace(/\s+[—–-]\s+.*/, '')));
+  return out.slice(0, 3);
+};
+const markets = T.days.reduce((a, d) => a + d.stops.filter(s => s.tag === `market`).length, 0);
+const stops = T.days.reduce((a, d) => a + d.stops.length, 0);
+
+const scenes = [
+  [7.5, () => { document.body.classList.add('dim'); ghost.setStyle({ opacity: 1 }); segs.forEach((_, i) => drawSeg(i, false)); showPins([], null);
+      fast ? map.setView([48.9, 9.3], 5.2, { animate: false }) : map.flyTo([48.9, mobile() ? 9.0 : 8.2], mobile() ? 5.6 : 6.4, { duration: 4 });
+      later(() => showPins(['munich', 'neusch', 'rothen', 'heidel', 'colmar', 'stras', 'frank'], null), 1800);
+      say(S.sIntroK, `<h1>${S.sIntroH}</h1>`, `<ul class="bul">${S.sIntroL(markets).map(x => `<li>${x}</li>`).join('')}</ul>`);
+      pics([{ src: IMG.neuschwanstein, n: P.neusch.n }, { src: IMG.christkindl, n: P.munich.n }, { src: IMG.petitefrance, n: P.stras.n }]); }],
+  ...T.days.map((d, i) => [9, () => {
+      document.body.classList.remove('dim');
+      segs.forEach((sg_, j) => j !== i && sg_.setStyle({ opacity: j < i ? .18 : 0 })); ghost.setStyle({ opacity: .15 });
+      const g = GEO[i], lls = dayLL[i];
+      showPins([...new Set(GEO.slice(0, i + 1).flatMap(x => x.path))], g.focus);
+      if (lls.length > 1) { flyBounds(lls); later(() => drawSeg(i, true), 1400); later(() => flyPoint(P[g.focus].ll, g.z, 3), 4300); }
+      else { drawSeg(i, true); flyPoint(P[g.focus].ll, g.z, 3.6); }
+      const hl = highlights(d);
+      say(`${S.day} ${i + 1}${d.date ? ` · ${dayLong(d)}` : ``}`, `<h1>${esc(d.title)}</h1>`,
+        (hl.length ? `<ul class="bul">${hl.map(h => `<li>${esc(h)}</li>`).join('')}</ul>` : '') +
+        `<div class="wx">${d.weather.icon} ${d.weather.t} · ${esc(d.weather.d)}</div>`);
+      pics(dayPics(d)); }]),
+  [9, () => { document.body.classList.add('dim'); ghost.setStyle({ opacity: 1 }); segs.forEach(s => s.setStyle({ opacity: 1 })); showPins(Object.keys(P).filter(k => !['muc', 'fra', 'hopferau', 'eguis', 'kaysers'].includes(k)), null);
+      flyBounds(all, 3.5); $('pics').innerHTML = '';
+      say(S.sAllK, `<h1>${S.sAllH}</h1>`, `<div class="big"><div><b>11</b><span>${S.days}</span></div><div><b>${stops}</b><span>${S.sStops}</span></div><div><b>${markets}</b><span>${S.sMarkets}</span></div></div>`); }],
+  [0, () => { $('endp').textContent = S.sEndP; $('end').classList.add('in'); }],
+];
+
+let i = -1, tm = null, paused = false, t0 = 0, left = 0;
+function next() { clearTimeout(tm); sg++; i++; if (i >= scenes.length) return; const [d, f] = scenes[i]; $('end').classList.remove('in'); try { map.invalidateSize(); f(); } catch (e) { console.warn(e); } if (d) { left = d * 1000; run(); } $('bar').style.width = (100 * (i + 1) / scenes.length) + '%'; dotsUI(); }
+function run() { t0 = Date.now(); if (!paused && $('au').checked) tm = setTimeout(next, left); }
+function goTo(k) {
+  k = Math.max(0, Math.min(scenes.length - 1, k)); clearTimeout(tm); sg++;
+  fast = true; for (let j = 0; j < k; j++) { try { scenes[j][1](); } catch (e) {} } fast = false;
+  i = k - 1; next();
+}
+function dotsUI() { $('sd').innerHTML = scenes.slice(0, -1).map((_, k) => `<i data-k="${k}" class="${k < i ? 'done' : k === i ? 'on' : ''}" title="${k === 0 ? S.sOpen : k <= T.days.length ? S.day + ' ' + k : S.sSum}"></i>`).join('');
+  $('sd').querySelectorAll('i').forEach(e => e.onclick = ev => { ev.stopPropagation(); goTo(+e.dataset.k); }); }
+function togglePause() { paused = !paused; $('pp').textContent = paused ? '▶' : '❚❚'; if (paused) { clearTimeout(tm); left -= Date.now() - t0; } else run(); }
+$('pp').onclick = togglePause; $('nx').onclick = () => goTo(i + 1); $('pv').onclick = () => goTo(i - 1);
+$('again').onclick = () => goTo(0);
+addEventListener('keydown', e => { if (e.key === (EN ? 'ArrowRight' : 'ArrowLeft') || e.key === 'PageDown') { e.preventDefault(); goTo(i + 1); } else if (e.key === (EN ? 'ArrowLeft' : 'ArrowRight') || e.key === 'PageUp') { e.preventDefault(); goTo(i - 1); } else if (e.key === ' ') { e.preventDefault(); togglePause(); } });
+// swipe on phones / iPad (RTL: swipe right = next)
+let sx = null, sy = null;
+addEventListener('touchstart', e => { if (e.target.closest('#ctl,#top,#end')) return; sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
+addEventListener('touchend', e => { if (sx == null) return; const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy; sx = null;
+  if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) goTo(i + ((dx > 0) !== EN ? 1 : -1)); else if (Math.abs(dx) < 10 && Math.abs(dy) < 10 && !$('au').checked) goTo(i + 1); });
+addEventListener('click', e => { if (!$('au').checked && !('ontouchstart' in window) && !e.target.closest('#ctl, a, button, label, #top, #end')) goTo(i + 1); });
+try { const v = localStorage.getItem('story_au'); if (v !== null) $('au').checked = v === '1'; } catch (e) {}
+$('au').onchange = () => { try { localStorage.setItem('story_au', $('au').checked ? '1' : '0'); } catch (e) {} clearTimeout(tm); if ($('au').checked) run(); };
+const start = +new URLSearchParams(location.search).get('day');
+setTimeout(() => start ? goTo(Math.min(start, T.days.length)) : next(), 500);
+})();
+</script>
+</body>
+</html>
