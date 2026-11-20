@@ -250,3 +250,12 @@ h1,h2,h3,.hero h1,.day-cover h2,.mapsec-head h2{font-weight:400;letter-spacing:.
 [dir="ltr"] .nb-fill{background:linear-gradient(90deg,#3e8f74,#7cc7a6)}
 [dir="rtl"] [dir="rtl"]{text-align:right}
 :lang(en) [lang="he"]{font-family:Rubik,system-ui,sans-serif}
+
+/* ✓ done checkboxes */
+.done-cb{appearance:none;-webkit-appearance:none;flex:none;width:22px;height:22px;margin:0;margin-inline-end:8px;vertical-align:-5px;border:2px solid #b9b0a0;border-radius:6px;background:#fff;cursor:pointer;display:inline-grid;place-content:center;transition:background .15s,border-color .15s}
+.done-cb::after{content:"✓";font:800 15px/1 Rubik,sans-serif;color:#fff;transform:scale(0);transition:transform .15s}
+.done-cb:checked{background:var(--pine);border-color:var(--pine)}
+.done-cb:checked::after{transform:scale(1)}
+.st.done .st-name,.sec li.done .n{text-decoration:line-through;text-decoration-color:rgba(0,0,0,.35)}
+.st.done .st-body,.sec li.done{opacity:.6}
+.st.done .st-dot{background:var(--pine);border-color:var(--pine)}

@@ -11,6 +11,10 @@
   const HE = o => o && o.he ? ` dir="rtl" lang="he"` : ``;
   const SEC_ICON = { must: `⭐`, food: `🍽️`, spa: `♨️`, rain: `☔`, book: `🎟️`, rec: `💡`, shop: `🛍️`, optional: `🧭` };
   const FR = (d, i) => [5, 6, 8].includes(i);
+  // ✓ done checkboxes, saved per browser (keys are by position, so they work in both languages)
+  let DONE = {}; try { DONE = JSON.parse(localStorage.getItem(`trip_done`) || `{}`); } catch (e) {}
+  const cb = k => `<input type="checkbox" class="done-cb" data-k="${k}"${DONE[k] ? ` checked` : ``} aria-label="✓">`;
+  const doneCls = k => DONE[k] ? ` done` : ``;
 
   // ── hero
   $(`#heroTitle`).textContent = T.title;
@@ -28,13 +32,14 @@
   const stopHTML = (s, di, si) => {
     const pic = s.img && img(s.img);
     const q = s.q || (s.tag === `hotel` ? null : s.n);
-    return `<li class="st t-${s.tag || `plain`}" id="s-${di}-${si}" data-min="${s.t ? toMin(s.t) : ``}">
+    const k = `s-${di}-${si}`, chk = s.tag !== `hotel` && s.tag !== `drive`;
+    return `<li class="st t-${s.tag || `plain`}${chk ? doneCls(k) : ``}" id="s-${di}-${si}" data-min="${s.t ? toMin(s.t) : ``}">
       <div class="st-time ${s.fixed ? `fixed` : ``}">${s.t ? (s.fixed ? `🔒 ` : `≈`) + s.t : ``}</div>
       <span class="st-dot"></span>
       <div class="st-body">
         ${pic ? `<img class="thumb" loading="lazy" src="${pic}" alt="" onerror="this.remove()">` : ``}
         <div class="st-main">
-          <div class="st-name">${esc(s.n)}${s.tag && TAGS[s.tag] ? `<span class="tag ${s.tag}">${TAGS[s.tag]}</span>` : ``}</div>
+          <div class="st-name">${chk ? cb(k) : ``}${esc(s.n)}${s.tag && TAGS[s.tag] ? `<span class="tag ${s.tag}">${TAGS[s.tag]}</span>` : ``}</div>
           ${s.d ? `<p class="st-desc"${HE(s)}>${s.d}</p>` : ``}
           <div class="st-meta">
             ${q ? `<a href="${gmaps(q)}" target="_blank" rel="noopener">📍 Google Maps</a>
@@ -44,15 +49,15 @@
         </div>
       </div></li>`;
   };
-  const secHTML = (sec, open) => `<details class="sec k-${sec.k}" ${open ? `open` : ``}>
+  const secHTML = (sec, open, di, xi) => `<details class="sec k-${sec.k}" ${open ? `open` : ``}>
       <summary>${SEC_ICON[sec.k] || `•`} ${esc(sec.title)}</summary>
-      <ul${HE(sec)}>${sec.items.map(it => `<li>
-        ${it.n ? `<span class="n">${esc(it.n)}</span>${it.gf ? `<span class="gf">${S.gf}</span>` : ``}` : ``}
+      <ul${HE(sec)}>${sec.items.map((it, j) => { const k = `i-${di}-${xi}-${j}`, chk = it.n && (it.q || it.url); return `<li class="${chk ? doneCls(k) : ``}">
+        ${it.n ? `${chk ? cb(k) : ``}<span class="n">${esc(it.n)}</span>${it.gf ? `<span class="gf">${S.gf}</span>` : ``}` : ``}
         ${it.a ? `<div class="a">${esc(it.a)}</div>` : ``}
         ${it.d ? `<div class="d">${it.d}</div>` : ``}
         ${it.q ? `<a class="lk" href="${gmaps(it.q)}" target="_blank" rel="noopener">📍 ${S.map}</a>` : ``}
         ${it.url ? `<a class="lk" href="${it.url}" target="_blank" rel="noopener">🔗 ${S.site}</a>` : ``}
-      </li>`).join(``)}</ul></details>`;
+      </li>`; }).join(``)}</ul></details>`;
 
   $(`#days`).innerHTML = T.days.map((d, i) => {
     const cover = img(d.img) || img(`munich`);
@@ -74,9 +79,16 @@
       ${d.note ? `<div class="callout note">💬 ${d.note}</div>` : ``}
       ${d.links ? `<div class="links"${EN ? `` : ``}>${d.links.map(l => `<a href="${l.u}" target="_blank" rel="noopener">🔗 ${esc(l.n)}</a>`).join(``)}</div>` : ``}
       <ol class="tl">${d.stops.map((s, si) => stopHTML(s, i, si)).join(``)}</ol>
-      ${d.sections.length ? `<div class="secs">${d.sections.map(s => secHTML(s, s.k === `must` || s.k === `rec`)).join(``)}</div>` : ``}
+      ${d.sections.length ? `<div class="secs">${d.sections.map((s, xi) => secHTML(s, s.k === `must` || s.k === `rec`, i, xi)).join(``)}</div>` : ``}
     </section>`;
   }).join(``);
+
+  $(`#days`).addEventListener(`change`, e => {
+    const c = e.target.closest(`.done-cb`); if (!c) return;
+    if (c.checked) DONE[c.dataset.k] = 1; else delete DONE[c.dataset.k];
+    c.closest(`li`).classList.toggle(`done`, c.checked);
+    try { localStorage.setItem(`trip_done`, JSON.stringify(DONE)); } catch (e) {}
+  });
 
   // ── satellite route map
   if (window.L && window.GEO) {
