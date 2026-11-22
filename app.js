@@ -69,7 +69,9 @@
           <h2>${esc(d.title)}</h2>
           <a class="dc-story" href="story.html?day=${i + 1}">${S.dayInStory}</a>
         </div>
+        <button class="dc-fold" type="button" data-i="${i}" aria-expanded="true"><span class="dc-prog"></span><b>▾</b></button>
       </div>
+      <div class="day-body">
       <div class="info">
         <div class="info-card"><div class="ic">${d.weather.icon}</div><div><div class="k">${S.weather}</div><div class="v">${d.weather.t}<small>${esc(d.weather.d)}</small></div></div></div>
         ${i === T.days.length - 1 ? `<div class="info-card"><div class="ic">✈️</div><div><div class="k">${S.today}</div><div class="v">${S.goingHome}</div></div></div>` : ``}
@@ -80,6 +82,7 @@
       ${d.links ? `<div class="links"${EN ? `` : ``}>${d.links.map(l => `<a href="${l.u}" target="_blank" rel="noopener">🔗 ${esc(l.n)}</a>`).join(``)}</div>` : ``}
       <ol class="tl">${d.stops.map((s, si) => stopHTML(s, i, si)).join(``)}</ol>
       ${d.sections.length ? `<div class="secs">${d.sections.map((s, xi) => secHTML(s, s.k === `must` || s.k === `rec`, i, xi)).join(``)}</div>` : ``}
+      </div>
     </section>`;
   }).join(``);
 
@@ -88,7 +91,36 @@
     if (c.checked) DONE[c.dataset.k] = 1; else delete DONE[c.dataset.k];
     c.closest(`li`).classList.toggle(`done`, c.checked);
     try { localStorage.setItem(`trip_done`, JSON.stringify(DONE)); } catch (e) {}
+    prog();
   });
+
+  // ── collapse days: past days fold automatically; a manual tap wins and is remembered
+  let FOLD = {}; try { FOLD = JSON.parse(localStorage.getItem(`trip_fold`) || `{}`); } catch (e) {}
+  let autoFold = () => false;
+  const setFold = (i, on) => {
+    const sec = $(`#day-${i + 1}`); sec.classList.toggle(`folded`, on);
+    const b = $(`.dc-fold`, sec); b.setAttribute(`aria-expanded`, !on); b.title = on ? S.unfold : S.fold;
+  };
+  const applyFold = () => T.days.forEach((d, i) => setFold(i, i in FOLD ? !!FOLD[i] : autoFold(i)));
+  const prog = () => document.querySelectorAll(`.day`).forEach(sec => {
+    const all = sec.querySelectorAll(`.done-cb`).length, n = sec.querySelectorAll(`.done-cb:checked`).length;
+    $(`.dc-prog`, sec).textContent = all ? `✓ ${n}/${all}` : ``;
+  });
+  prog();
+  const userFold = (i, on) => {
+    if (on === autoFold(i)) delete FOLD[i]; else FOLD[i] = on ? 1 : 0;
+    try { localStorage.setItem(`trip_fold`, JSON.stringify(FOLD)); } catch (e) {}
+    setFold(i, on);
+  };
+  $(`#days`).addEventListener(`click`, e => {
+    const b = e.target.closest(`.dc-fold`); if (!b) return;
+    const i = +b.dataset.i, on = !$(`#day-${i + 1}`).classList.contains(`folded`);
+    userFold(i, on);
+    if (on) $(`#day-${i + 1}`).scrollIntoView({ block: `start` });
+  });
+  // opening a folded day when jumping into it
+  const reveal = el => { const sec = el && el.closest(`.day`); if (sec && sec.classList.contains(`folded`)) userFold(+sec.dataset.day - 1, false); };
+  addEventListener(`hashchange`, () => reveal($(location.hash)));
 
   // ── satellite route map
   if (window.L && window.GEO) {
@@ -135,6 +167,8 @@
     document.querySelectorAll(`.day`).forEach(e => e.classList.remove(`today`));
     btns.forEach(b => b.classList.remove(`today`));
     const status = $(`#nbStatus`), cd = $(`#countdown`);
+    autoFold = i => window.TRIP_KNOWN && now.date >= T.start && now.date <= T.end && T.days[i].date < now.date;
+    applyFold();
 
     if (!window.TRIP_KNOWN) {
       // no private start date on this device: plain plan, no live tracking
@@ -192,14 +226,16 @@
       jumpTarget = curS ? $(`#s-${di}-${curS.si}`) : sec;
       $(`#nbJump`).textContent = S.jumpNow;
       if (firstRun && !location.hash) {
-        const go = () => jumpTarget.scrollIntoView({ block: `center`, behavior: `instant` });
+        const go = () => { reveal(jumpTarget); jumpTarget.scrollIntoView({ block: `center`, behavior: `instant` }); };
         if (`scrollRestoration` in history) history.scrollRestoration = `manual`;
         (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => setTimeout(go, 150));
       }
     }
     firstRun = false;
   }
-  $(`#nbJump`).addEventListener(`click`, () => jumpTarget && jumpTarget.scrollIntoView({ block: `center` }));
+  const jump = () => { if (!jumpTarget) return; reveal(jumpTarget); jumpTarget.scrollIntoView({ block: `center`, behavior: `smooth` }); };
+  $(`#nbJump`).addEventListener(`click`, jump);
+  const fab = $(`#fabNow`); if (fab) { fab.textContent = S.fabNow; fab.addEventListener(`click`, jump); }
   update();
   setInterval(update, 30000);
 })();

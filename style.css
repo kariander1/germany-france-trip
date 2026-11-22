@@ -259,3 +259,17 @@ h1,h2,h3,.hero h1,.day-cover h2,.mapsec-head h2{font-weight:400;letter-spacing:.
 .st.done .st-name,.sec li.done .n{text-decoration:line-through;text-decoration-color:rgba(0,0,0,.35)}
 .st.done .st-body,.sec li.done{opacity:.6}
 .st.done .st-dot{background:var(--pine);border-color:var(--pine)}
+
+/* collapse days */
+.dc-fold{position:absolute;z-index:2;top:12px;inset-inline-end:12px;display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(255,255,255,.35);background:rgba(0,0,0,.4);color:#fff;border-radius:999px;padding:6px 12px;font:600 13px Rubik,sans-serif;cursor:pointer;backdrop-filter:blur(6px)}
+.dc-fold b{font-size:16px;line-height:1;transition:transform .2s}
+.dc-prog:empty{display:none}
+.day.folded .day-body{display:none}
+.day.folded .day-cover{min-height:110px}
+.day.folded .dc-story{display:none}
+.day.folded .dc-fold b{transform:rotate(-90deg)}
+[dir=rtl] .day.folded .dc-fold b{transform:rotate(90deg)}
+.day.folded{margin-bottom:24px;opacity:.85}
+/* floating jump-to-now */
+.fab-now{position:fixed;z-index:50;bottom:calc(18px + env(safe-area-inset-bottom));inset-inline-start:18px;border:0;border-radius:999px;padding:12px 18px;background:var(--berry);color:#fff;font:700 15px Rubik,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.4);cursor:pointer}
+.fab-now:active{transform:scale(.96)}
