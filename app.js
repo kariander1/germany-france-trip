@@ -176,7 +176,7 @@
       status.innerHTML = `🎄 <b>${esc(T.title)}</b> · ${S.dates}`;
       cd.innerHTML = ``;
       $(`#nbDay`).hidden = true; jumpTarget = $(`#day-1`);
-      $(`#nbJump`).textContent = S.jumpFirst;
+      $(`#nbJump`).textContent = S.jumpNow;
     } else if (now.date < T.start || (di === 0 && now.min < toMin(T.days[0].stops[0].t) - 360)) {
       // before the trip
       btns.forEach(b => $(`i`, b).style.width = `0`);
@@ -233,7 +233,16 @@
     }
     firstRun = false;
   }
-  const jump = () => { if (!jumpTarget) return; reveal(jumpTarget); jumpTarget.scrollIntoView({ block: `center`, behavior: `smooth` }); };
+  // No start date on this device yet → ask for it once (date picker), then "now" follows the real date & time.
+  const pick = document.createElement(`input`);
+  pick.type = `date`; pick.className = `start-pick`; pick.setAttribute(`aria-label`, S.pickStart); pick.title = S.pickStart;
+  document.body.appendChild(pick);
+  pick.addEventListener(`change`, () => { if (!pick.value) return; const u = new URL(location.href); u.searchParams.set(`start`, pick.value); u.hash = ``; location.href = u.toString(); });
+  const askStart = () => { try { pick.showPicker(); } catch (e) { pick.focus(); pick.click(); } };
+  const jump = () => {
+    if (!window.TRIP_KNOWN) return askStart();
+    if (!jumpTarget) return; reveal(jumpTarget); jumpTarget.scrollIntoView({ block: `center`, behavior: `smooth` });
+  };
   $(`#nbJump`).addEventListener(`click`, jump);
   const fab = $(`#fabNow`); if (fab) { fab.textContent = S.fabNow; fab.addEventListener(`click`, jump); }
   update();
