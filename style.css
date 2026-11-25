@@ -273,4 +273,14 @@ h1,h2,h3,.hero h1,.day-cover h2,.mapsec-head h2{font-weight:400;letter-spacing:.
 /* floating jump-to-now */
 .fab-now{position:fixed;z-index:50;bottom:calc(18px + env(safe-area-inset-bottom));inset-inline-start:18px;border:0;border-radius:999px;padding:12px 18px;background:var(--berry);color:#fff;font:700 15px Rubik,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.4);cursor:pointer}
 .fab-now:active{transform:scale(.96)}
-.start-pick{position:fixed;bottom:24px;inset-inline-start:24px;width:1px;height:1px;opacity:0;pointer-events:none;border:0;padding:0}
+/* start-date sheet + toast */
+.sheet{position:fixed;inset:0;z-index:100;background:rgba(5,10,18,.6);display:grid;place-items:end center;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}
+.sheet[hidden],.toast[hidden]{display:none}
+.sheet-card{width:min(420px,100%);background:#fff;color:var(--ink);border-radius:18px;padding:18px;display:grid;gap:12px;font:500 16px Rubik,sans-serif;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.sheet-date{font:500 18px Rubik,sans-serif;padding:10px 12px;border:1px solid var(--line);border-radius:10px;width:100%;box-sizing:border-box;min-height:46px}
+.sheet-btns{display:flex;gap:10px}
+.sheet-btns button{flex:1;border:0;border-radius:999px;padding:12px;font:700 15px Rubik,sans-serif;cursor:pointer}
+.sheet-ok{background:var(--berry);color:#fff}
+.sheet-x{background:#eee;color:var(--ink)}
+.toast{position:fixed;z-index:60;bottom:calc(80px + env(safe-area-inset-bottom));inset-inline:16px;margin:0 auto;max-width:420px;background:#101a2b;color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:12px 14px;font:500 14px Rubik,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+.toast .chg{all:unset;cursor:pointer;color:var(--gold2);font-weight:700;margin-inline-start:6px;text-decoration:underline}

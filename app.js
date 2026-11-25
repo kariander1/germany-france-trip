@@ -233,14 +233,31 @@
     }
     firstRun = false;
   }
-  // No start date on this device yet → ask for it once (date picker), then "now" follows the real date & time.
-  const pick = document.createElement(`input`);
-  pick.type = `date`; pick.className = `start-pick`; pick.setAttribute(`aria-label`, S.pickStart); pick.title = S.pickStart;
-  document.body.appendChild(pick);
-  pick.addEventListener(`change`, () => { if (!pick.value) return; const u = new URL(location.href); u.searchParams.set(`start`, pick.value); u.hash = ``; location.href = u.toString(); });
-  const askStart = () => { try { pick.showPicker(); } catch (e) { pick.focus(); pick.click(); } };
+  // Start-date sheet (visible, so the native date picker works on iPhone too)
+  const sheet = document.createElement(`div`);
+  sheet.className = `sheet`; sheet.hidden = true;
+  sheet.innerHTML = `<div class="sheet-card"><b>${S.pickStart}</b>
+    <input type="date" class="sheet-date" value="${T.start || ``}">
+    <div class="sheet-btns"><button type="button" class="sheet-ok">${S.ok}</button><button type="button" class="sheet-x">${S.cancel}</button></div></div>`;
+  document.body.appendChild(sheet);
+  const askStart = () => { sheet.hidden = false; };
+  sheet.addEventListener(`click`, e => {
+    if (e.target === sheet || e.target.closest(`.sheet-x`)) sheet.hidden = true;
+    if (e.target.closest(`.sheet-ok`)) {
+      const v = $(`.sheet-date`, sheet).value; if (!v) return;
+      try { localStorage.setItem(`trip_start`, v); } catch (er) {}
+      location.href = location.pathname + location.search;
+    }
+  });
+  const toast = document.createElement(`div`); toast.className = `toast`; toast.hidden = true; document.body.appendChild(toast);
+  let tt; const say = html => { toast.innerHTML = html; toast.hidden = false; clearTimeout(tt); tt = setTimeout(() => toast.hidden = true, 5000); };
+  toast.addEventListener(`click`, e => { if (e.target.closest(`.chg`)) { toast.hidden = true; askStart(); } });
+
   const jump = () => {
     if (!window.TRIP_KNOWN) return askStart();
+    const now = localNow(), chg = ` <button type="button" class="chg">${S.changeDate}</button>`;
+    if (now.date < T.start) say(`${S.notYet(Math.ceil((Date.UTC(+T.start.slice(0, 4), +T.start.slice(5, 7) - 1, +T.start.slice(8, 10)) - Date.UTC(+now.date.slice(0, 4), +now.date.slice(5, 7) - 1, +now.date.slice(8, 10))) / 864e5))}${chg}`);
+    else if (now.date > T.end) say(S.over + chg);
     if (!jumpTarget) return; reveal(jumpTarget); jumpTarget.scrollIntoView({ block: `center`, behavior: `smooth` });
   };
   $(`#nbJump`).addEventListener(`click`, jump);
