@@ -12,9 +12,11 @@
   const SEC_ICON = { must: `⭐`, food: `🍽️`, spa: `♨️`, rain: `☔`, book: `🎟️`, rec: `💡`, shop: `🛍️`, optional: `🧭` };
   const FR = (d, i) => [5, 6, 8].includes(i);
   // ✓ done checkboxes, saved per browser (keys are by position, so they work in both languages)
-  let DONE = {}; try { DONE = JSON.parse(localStorage.getItem(`trip_done`) || `{}`); } catch (e) {}
-  const cb = k => `<input type="checkbox" class="done-cb" data-k="${k}"${DONE[k] ? ` checked` : ``} aria-label="✓">`;
-  const doneCls = k => DONE[k] ? ` done` : ``;
+  const ST = window.STORE;
+  const cb = k => `<input type="checkbox" class="done-cb" data-k="${k}"${ST.done(k) ? ` checked` : ``} aria-label="✓">`;
+  const doneCls = k => ST.done(k) ? ` done` : ``;
+  const ntBtn = k => `<button type="button" class="nt-btn" data-k="${k}">📝 ${S.note}</button>`;
+  const ntBox = k => `<div class="my-note" data-k="${k}" hidden></div>`;
 
   // ── hero
   $(`#heroTitle`).textContent = T.title;
@@ -41,10 +43,13 @@
         <div class="st-main">
           <div class="st-name">${chk ? cb(k) : ``}${esc(s.n)}${s.tag && TAGS[s.tag] ? `<span class="tag ${s.tag}">${TAGS[s.tag]}</span>` : ``}</div>
           ${s.d ? `<p class="st-desc"${HE(s)}>${s.d}</p>` : ``}
+          ${ntBox(k)}
           <div class="st-meta">
+            ${s.h ? `<span class="hrs" data-h="${s.h}" data-di="${di}"></span>` : ``}
             ${q ? `<a href="${gmaps(q)}" target="_blank" rel="noopener">📍 Google Maps</a>
             <a href="${waze(q)}" target="_blank" rel="noopener">🚗 Waze</a>` : ``}
             ${s.url ? `<a href="${s.url}" target="_blank" rel="noopener">🔗 ${S.site}</a>` : ``}
+            ${ntBtn(k)}
           </div>
         </div>
       </div></li>`;
@@ -57,6 +62,7 @@
         ${it.d ? `<div class="d">${it.d}</div>` : ``}
         ${it.q ? `<a class="lk" href="${gmaps(it.q)}" target="_blank" rel="noopener">📍 ${S.map}</a>` : ``}
         ${it.url ? `<a class="lk" href="${it.url}" target="_blank" rel="noopener">🔗 ${S.site}</a>` : ``}
+        ${chk ? ntBtn(k) + ntBox(k) : ``}
       </li>`; }).join(``)}</ul></details>`;
 
   $(`#days`).innerHTML = T.days.map((d, i) => {
@@ -73,7 +79,7 @@
       </div>
       <div class="day-body">
       <div class="info">
-        <div class="info-card"><div class="ic">${d.weather.icon}</div><div><div class="k">${S.weather}</div><div class="v">${d.weather.t}<small>${esc(d.weather.d)}</small></div></div></div>
+        <div class="info-card wx" data-i="${i}"><div class="ic">${d.weather.icon}</div><div><div class="k">${S.weather}</div><div class="v">${d.weather.t}<small>${esc(d.weather.d)}</small></div></div></div>
         ${i === T.days.length - 1 ? `<div class="info-card"><div class="ic">✈️</div><div><div class="k">${S.today}</div><div class="v">${S.goingHome}</div></div></div>` : ``}
         ${d.drive ? `<div class="info-card"><div class="ic">🚗</div><div><div class="k">${S.drive}</div><div class="v"><small>${esc(d.drive)}</small></div></div></div>` : ``}
       </div>
@@ -88,10 +94,14 @@
 
   $(`#days`).addEventListener(`change`, e => {
     const c = e.target.closest(`.done-cb`); if (!c) return;
-    if (c.checked) DONE[c.dataset.k] = 1; else delete DONE[c.dataset.k];
+    ST.setDone(c.dataset.k, c.checked);
     c.closest(`li`).classList.toggle(`done`, c.checked);
-    try { localStorage.setItem(`trip_done`, JSON.stringify(DONE)); } catch (e) {}
     prog();
+  });
+  // changes arriving from the other phone
+  ST.onChange(() => {
+    document.querySelectorAll(`.done-cb`).forEach(c => { const v = ST.done(c.dataset.k); c.checked = v; c.closest(`li`).classList.toggle(`done`, v); });
+    prog(); renderNotes();
   });
 
   // ── collapse days: past days fold automatically; a manual tap wins and is remembered
@@ -121,6 +131,62 @@
   // opening a folded day when jumping into it
   const reveal = el => { const sec = el && el.closest(`.day`); if (sec && sec.classList.contains(`folded`)) userFold(+sec.dataset.day - 1, false); };
   addEventListener(`hashchange`, () => reveal($(location.hash)));
+
+  // ── opening hours → "open now" badge on the day itself, plain hours otherwise
+  function hours(now) {
+    document.querySelectorAll(`.hrs`).forEach(el => {
+      const [a, b] = el.dataset.h.split(`–`), d = T.days[+el.dataset.di];
+      let txt = `🕒 ${a ? el.dataset.h : S.until(b)}`, cls = ``;
+      if (window.TRIP_KNOWN && d.date === now.date) {
+        const o = a ? toMin(a) : null, c = toMin(b), m = now.min;
+        if (o != null && m < o) { txt = `🕒 ${S.opensAt(a)}`; cls = `later`; }
+        else if (m >= c) { txt = `⛔ ${S.closedNow}`; cls = `closed`; }
+        else if (c - m <= 45) { txt = `⏳ ${S.closingIn(c - m)}`; cls = `soon`; }
+        else { txt = `🟢 ${S.openUntil(b)}`; cls = `open`; }
+      }
+      el.textContent = txt; el.className = `hrs ${cls}`;
+    });
+  }
+
+  // ── live forecast (Open-Meteo, no key). Up to 16 days ahead; cached for offline.
+  const WX = { 0: [`☀️`, `בהיר`, `Clear`], 1: [`🌤️`, `בהיר ברובו`, `Mostly clear`], 2: [`⛅`, `מעונן חלקית`, `Partly cloudy`], 3: [`☁️`, `מעונן`, `Overcast`],
+    45: [`🌫️`, `ערפל`, `Fog`], 48: [`🌫️`, `ערפל`, `Fog`], 51: [`🌦️`, `טפטוף`, `Drizzle`], 53: [`🌦️`, `טפטוף`, `Drizzle`], 55: [`🌦️`, `טפטוף`, `Drizzle`],
+    56: [`🌧️`, `טפטוף קופא`, `Freezing drizzle`], 57: [`🌧️`, `טפטוף קופא`, `Freezing drizzle`], 61: [`🌧️`, `גשם קל`, `Light rain`], 63: [`🌧️`, `גשם`, `Rain`], 65: [`🌧️`, `גשם חזק`, `Heavy rain`],
+    66: [`🌧️`, `גשם קופא`, `Freezing rain`], 67: [`🌧️`, `גשם קופא`, `Freezing rain`], 71: [`🌨️`, `שלג קל`, `Light snow`], 73: [`🌨️`, `שלג`, `Snow`], 75: [`❄️`, `שלג כבד`, `Heavy snow`], 77: [`🌨️`, `שלג`, `Snow`],
+    80: [`🌦️`, `ממטרים`, `Showers`], 81: [`🌧️`, `ממטרים`, `Showers`], 82: [`⛈️`, `ממטרים חזקים`, `Heavy showers`], 85: [`🌨️`, `ממטרי שלג`, `Snow showers`], 86: [`🌨️`, `ממטרי שלג`, `Snow showers`],
+    95: [`⛈️`, `סופת רעמים`, `Thunderstorm`], 96: [`⛈️`, `סופת רעמים`, `Thunderstorm`], 99: [`⛈️`, `סופת רעמים`, `Thunderstorm`] };
+  async function weather() {
+    if (!window.TRIP_KNOWN || !window.GEO || !window.PLACES) return;
+    const today = localNow().date;
+    let c = null; try { c = JSON.parse(localStorage.getItem(`trip_wx`)); } catch (e) {}
+    if (!c || c.start !== T.start || Date.now() - c.t > 2 * 36e5) {
+      if (navigator.onLine !== false) try {
+        const ll = T.days.map((d, i) => PLACES[GEO[i].focus].ll);
+        const u = `https://api.open-meteo.com/v1/forecast?latitude=${ll.map(x => x[0]).join(`,`)}&longitude=${ll.map(x => x[1]).join(`,`)}` +
+          `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&current=temperature_2m,weather_code&timezone=Europe%2FBerlin&forecast_days=16`;
+        const r = await fetch(u); if (!r.ok) throw 0;
+        let j = await r.json(); if (!Array.isArray(j)) j = [j];
+        const days = {};
+        T.days.forEach((d, i) => {
+          const x = j[i], k = x && x.daily ? x.daily.time.indexOf(d.date) : -1;
+          if (k < 0) return;
+          days[i] = { c: x.daily.weather_code[k], lo: Math.round(x.daily.temperature_2m_min[k]), hi: Math.round(x.daily.temperature_2m_max[k]), p: x.daily.precipitation_probability_max[k],
+            now: d.date === today && x.current ? Math.round(x.current.temperature_2m) : null };
+        });
+        c = { t: Date.now(), start: T.start, days }; localStorage.setItem(`trip_wx`, JSON.stringify(c));
+      } catch (e) {}
+    }
+    if (!c) return;
+    document.querySelectorAll(`.info-card.wx`).forEach(card => {
+      const w = c.days[card.dataset.i], d = T.days[+card.dataset.i];
+      if (!w || d.date < today) return;
+      const m = WX[w.c] || [`🌡️`, ``, ``];
+      $(`.ic`, card).textContent = m[0];
+      $(`.k`, card).textContent = `${S.forecast}${w.now != null && d.date === today ? ` · ${S.nowT} ${w.now}°` : ``}`;
+      $(`.v`, card).innerHTML = `${w.lo}°–${w.hi}°<small>${EN ? m[2] : m[1]}${w.p != null ? ` · ☔ ${w.p}%` : ``}</small>`;
+      card.classList.add(`live`);
+    });
+  }
 
   // ── satellite route map
   if (window.L && window.GEO) {
@@ -169,6 +235,7 @@
     const status = $(`#nbStatus`), cd = $(`#countdown`);
     autoFold = i => window.TRIP_KNOWN && now.date >= T.start && now.date <= T.end && T.days[i].date < now.date;
     applyFold();
+    hours(now);
 
     if (!window.TRIP_KNOWN) {
       // no private start date on this device: plain plan, no live tracking
@@ -233,22 +300,124 @@
     }
     firstRun = false;
   }
-  // Start-date sheet (visible, so the native date picker works on iPhone too)
+  // ── generic bottom sheet
   const sheet = document.createElement(`div`);
-  sheet.className = `sheet`; sheet.hidden = true;
-  sheet.innerHTML = `<div class="sheet-card"><b>${S.pickStart}</b>
-    <input type="date" class="sheet-date" value="${T.start || ``}">
-    <div class="sheet-btns"><button type="button" class="sheet-ok">${S.ok}</button><button type="button" class="sheet-x">${S.cancel}</button></div></div>`;
-  document.body.appendChild(sheet);
-  const askStart = () => { sheet.hidden = false; };
-  sheet.addEventListener(`click`, e => {
-    if (e.target === sheet || e.target.closest(`.sheet-x`)) sheet.hidden = true;
-    if (e.target.closest(`.sheet-ok`)) {
+  sheet.className = `sheet`; sheet.hidden = true; document.body.appendChild(sheet);
+  let onSheet = null;
+  const openSheet = (html, fn) => { sheet.innerHTML = `<div class="sheet-card">${html}</div>`; onSheet = fn; sheet.hidden = false; };
+  const closeSheet = () => { sheet.hidden = true; sheet.innerHTML = ``; onSheet = null; };
+  sheet.addEventListener(`click`, e => { if (e.target === sheet || e.target.closest(`.sheet-x`)) return closeSheet(); onSheet && onSheet(e); });
+  sheet.addEventListener(`change`, e => onSheet && onSheet(e));
+
+  // ── settings: start date, sync, install, offline
+  let installEv = null;
+  addEventListener(`beforeinstallprompt`, e => { e.preventDefault(); installEv = e; });
+  const standalone = () => matchMedia(`(display-mode: standalone)`).matches || navigator.standalone;
+  const syncLine = () => !ST.synced ? `` : ST.status === `err` ? `⚠️ ${S.syncErr}` : ST.status === `busy` ? `🔄 …` :
+    `✓ ${S.syncOk}${ST.lastSync ? ` · ${new Date(ST.lastSync).toLocaleTimeString(EN ? `en-GB` : `he-IL`, { hour: `2-digit`, minute: `2-digit` })}` : ``}`;
+  const settingsHTML = () => `<div class="sheet-head"><b>⚙️ ${S.settings}</b><button type="button" class="sheet-x x-only" aria-label="${S.close}">✕</button></div>
+    <section class="set"><h4>📅 ${S.pickStart}</h4>
+      <div class="row"><input type="date" class="sheet-date" value="${T.start || ``}"><button type="button" class="btn act-start">${S.ok}</button></div></section>
+    <section class="set"><h4>🔄 ${S.syncH}</h4>
+      ${ST.synced ? `<p class="sync-st">${syncLine()}</p>
+        <div class="row"><button type="button" class="btn act-share">📤 ${S.syncShare}</button><button type="button" class="btn ghost act-unsync">${S.syncOff}</button></div>`
+      : `<p class="help">${S.syncHelp}</p>
+        <a class="help-lk" href="https://github.com/settings/tokens/new?scopes=gist&description=trip-sync" target="_blank" rel="noopener">🔑 ${S.syncToken}</a>
+        <div class="row"><input type="password" class="sync-tok" placeholder="ghp_…" autocomplete="off"><button type="button" class="btn act-sync">${S.syncOn}</button></div>`}
+      <p class="help">${S.photoLocal}</p></section>
+    <section class="set"><h4>📲 ${S.installH}</h4>
+      ${standalone() ? `<p class="help">✓ ${S.installed}</p>` : installEv ? `<button type="button" class="btn act-install">${S.install}</button>` : `<p class="help">${S.installHelp}</p>`}
+      <p class="help">${navigator.serviceWorker && navigator.serviceWorker.controller ? `✓ ${S.offlineOk}` : S.offlineSoon}</p></section>`;
+  const settings = () => openSheet(settingsHTML(), async e => {
+    if (e.type !== `click`) return;
+    const b = e.target.closest(`button`); if (!b) return;
+    if (b.matches(`.act-start`)) {
       const v = $(`.sheet-date`, sheet).value; if (!v) return;
       try { localStorage.setItem(`trip_start`, v); } catch (er) {}
       location.href = location.pathname + location.search;
-    }
+    } else if (b.matches(`.act-sync`)) {
+      const t = $(`.sync-tok`, sheet).value; if (!t.trim()) return;
+      b.disabled = true; b.textContent = `…`;
+      try { await ST.enable(t); settings(); share(); } catch (er) { b.disabled = false; b.textContent = S.syncOn; say(`⚠️ ${er.message === `token` ? S.syncBadToken : S.syncErr}`); }
+    } else if (b.matches(`.act-share`)) share();
+    else if (b.matches(`.act-unsync`)) { ST.disable(); settings(); }
+    else if (b.matches(`.act-install`) && installEv) { installEv.prompt(); installEv = null; closeSheet(); }
   });
+  const share = async () => {
+    const u = ST.shareLink(); if (!u) return;
+    try { if (navigator.share) { await navigator.share({ title: T.title, text: S.syncShareText, url: u }); return; } } catch (er) { if (er.name === `AbortError`) return; }
+    try { await navigator.clipboard.writeText(u); say(`📋 ${S.copied}`); } catch (er) { prompt(``, u); }
+  };
+  ST.onStatus(() => { const p = $(`.sync-st`, sheet); if (p) p.textContent = syncLine(); });
+  const askStart = settings;
+  const gear = document.createElement(`button`);
+  gear.type = `button`; gear.className = `nb-jump nb-gear`; gear.textContent = `⚙️`; gear.title = S.settings; gear.setAttribute(`aria-label`, S.settings);
+  gear.onclick = settings; $(`.nb-btns`).prepend(gear);
+
+  // ── my notes & photos (photos stay on this phone, in IndexedDB)
+  const idb = (() => {
+    let p;
+    const open = () => p || (p = new Promise((res, rej) => {
+      const r = indexedDB.open(`trip`, 1);
+      r.onupgradeneeded = () => r.result.createObjectStore(`photos`, { keyPath: `id` });
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    }));
+    const tx = async (mode, fn) => { const db = await open(); return new Promise((res, rej) => { const t = db.transaction(`photos`, mode), q = fn(t.objectStore(`photos`)); t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error); }); };
+    return { all: () => tx(`readonly`, o => o.getAll()), put: x => tx(`readwrite`, o => o.put(x)), del: id => tx(`readwrite`, o => o.delete(id)) };
+  })();
+  const shrink = f => new Promise(res => {
+    const u = URL.createObjectURL(f), im = new Image();
+    im.onload = () => {
+      const r = Math.min(1, 1600 / Math.max(im.width, im.height)), c = document.createElement(`canvas`);
+      c.width = Math.round(im.width * r); c.height = Math.round(im.height * r);
+      c.getContext(`2d`).drawImage(im, 0, 0, c.width, c.height); URL.revokeObjectURL(u);
+      c.toBlob(b => res(b || f), `image/jpeg`, .82);
+    };
+    im.onerror = () => { URL.revokeObjectURL(u); res(f); };
+    im.src = u;
+  });
+  let PH = [], urls = [];
+  const loadPhotos = async () => { try { PH = (await idb.all()) || []; } catch (e) { PH = []; } };
+  const purl = p => { const u = URL.createObjectURL(p.blob); urls.push(u); return u; };
+  const renderNotes = () => {
+    urls.forEach(u => URL.revokeObjectURL(u)); urls = [];
+    document.querySelectorAll(`.my-note`).forEach(box => {
+      const k = box.dataset.k, t = ST.note(k), ph = PH.filter(p => p.k === k);
+      box.hidden = !t && !ph.length;
+      box.innerHTML = box.hidden ? `` : `${t ? `<p>${esc(t).replace(/\n/g, `<br>`)}</p>` : ``}${ph.length ? `<div class="nt-ph">${ph.map(p => `<img src="${purl(p)}" data-id="${p.id}" alt="">`).join(``)}</div>` : ``}`;
+      const btn = box.parentElement.querySelector(`.nt-btn[data-k="${k}"]`); if (btn) btn.classList.toggle(`has`, !box.hidden);
+    });
+  };
+  loadPhotos().then(renderNotes);
+  const nameOf = k => { const el = $(`#${k}`) || document.querySelector(`.done-cb[data-k="${k}"]`)?.closest(`li`); const n = el && (el.querySelector(`.st-name`) || el.querySelector(`.n`)); return n ? n.textContent.trim() : ``; };
+  const noteSheet = k => {
+    const ph = () => PH.filter(p => p.k === k).map(p => `<span class="ph"><img src="${URL.createObjectURL(p.blob)}" alt=""><button type="button" class="ph-del" data-id="${p.id}" aria-label="✕">✕</button></span>`).join(``);
+    openSheet(`<div class="sheet-head"><b>📝 ${esc(nameOf(k))}</b><button type="button" class="sheet-x x-only" aria-label="${S.close}">✕</button></div>
+      <textarea class="nt-text" rows="4" placeholder="${S.notePh}">${esc(ST.note(k))}</textarea>
+      <div class="nt-ph edit">${ph()}</div>
+      <label class="btn ghost nt-add">📷 ${S.addPhoto}<input type="file" accept="image/*" multiple hidden></label>
+      <div class="sheet-btns"><button type="button" class="sheet-ok">${S.ok}</button><button type="button" class="sheet-x">${S.cancel}</button></div>`,
+    async e => {
+      if (e.type === `change` && e.target.type === `file`) {
+        for (const f of e.target.files) { const blob = await shrink(f); const x = { id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, k, blob, t: Date.now() }; try { await idb.put(x); PH.push(x); } catch (er) {} }
+        $(`.nt-ph.edit`, sheet).innerHTML = ph(); renderNotes(); return;
+      }
+      if (e.type !== `click`) return;
+      const del = e.target.closest(`.ph-del`);
+      if (del) { try { await idb.del(del.dataset.id); } catch (er) {} PH = PH.filter(p => p.id !== del.dataset.id); $(`.nt-ph.edit`, sheet).innerHTML = ph(); renderNotes(); return; }
+      if (e.target.closest(`.sheet-ok`)) {
+        const v = $(`.nt-text`, sheet).value.trim();
+        if (v !== ST.note(k)) ST.setNote(k, v);
+        closeSheet(); renderNotes();
+      }
+    });
+  };
+  $(`#days`).addEventListener(`click`, e => {
+    const b = e.target.closest(`.nt-btn`); if (b) return noteSheet(b.dataset.k);
+    const im = e.target.closest(`.my-note img`);
+    if (im) openSheet(`<img class="lightbox" src="${im.src}" alt=""><div class="sheet-btns"><button type="button" class="sheet-x">${S.close}</button></div>`, null);
+  });
+
   const toast = document.createElement(`div`); toast.className = `toast`; toast.hidden = true; document.body.appendChild(toast);
   let tt; const say = html => { toast.innerHTML = html; toast.hidden = false; clearTimeout(tt); tt = setTimeout(() => toast.hidden = true, 5000); };
   toast.addEventListener(`click`, e => { if (e.target.closest(`.chg`)) { toast.hidden = true; askStart(); } });
@@ -264,4 +433,8 @@
   const fab = $(`#fabNow`); if (fab) { fab.textContent = S.fabNow; fab.addEventListener(`click`, jump); }
   update();
   setInterval(update, 30000);
+  weather(); setInterval(weather, 30 * 6e4);
+
+  if (`serviceWorker` in navigator && (location.protocol === `https:` || location.hostname === `localhost`))
+    addEventListener(`load`, () => navigator.serviceWorker.register(`sw.js`).catch(() => {}));
 })();
